@@ -13,13 +13,12 @@ bool ProductionTask::resolve() {
 		const BWAPI::Unit depot = Tools::GetDepot();
 		const BWAPI::UnitType worker = BWAPI::Broodwar->self()->getRace().getWorker();
 		if (depot && !depot->isTraining() && minerals >= worker.mineralPrice()) {
-			depot->train(worker);
-			BWAPI::Broodwar->printf("Started training new worker");
+			if (depot->train(worker)) BWAPI::Broodwar->printf("Started training new worker");
 		}
 		return false;
 	}
 
-	if (isDone() || isInProgress() || minerals < unitType.mineralPrice() || gas < unitType.gasPrice()) return false;
+	if (isInProgress() || minerals < unitType.mineralPrice() || gas < unitType.gasPrice()) return false;
 
 	if (unitType.isBuilding()) {
 		const bool startedBuilding = Tools::BuildBuilding(unitType);

@@ -2,6 +2,7 @@
 
 #include "MapTools.h"
 #include "ProductionManager.h"
+#include "TroopManager.h"
 
 #include <BWAPI.h>
 
@@ -10,13 +11,13 @@ class StarterBot
 private:
 	MapTools m_mapTools;
 	ProductionManager productionManager;
+	TroopManager troopManager;
 
 public:
 
 	StarterBot();
 
 	// helper functions to get you started with bot programming and learn the API
-	void buildDeffense();
 	void sendIdleWorkersToMinerals();
 	void trainAdditionalWorkers();
 	void buildAdditionalSupply();

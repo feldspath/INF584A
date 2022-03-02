@@ -150,7 +150,12 @@ void StarterBot::onUnitCreate(BWAPI::Unit unit)
 // Called whenever a unit finished construction, with a pointer to the unit
 void StarterBot::onUnitComplete(BWAPI::Unit unit)
 {
+	if (unit->canBuild()) {
 
+	}
+	else {
+		troopManager.assignNewTroop(unit);
+	}
 }
 
 // Called whenever a unit appears, with a pointer to the destroyed unit
