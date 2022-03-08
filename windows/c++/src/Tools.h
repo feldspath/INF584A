@@ -1,6 +1,7 @@
 #pragma once
 
 #include <BWAPI.h>
+#include <optional>
 
 namespace Tools
 {
@@ -9,8 +10,8 @@ namespace Tools
 
     int CountUnitsOfType(BWAPI::UnitType type, const BWAPI::Unitset& units);
 
-    BWAPI::Unit GetUnitOfType(BWAPI::UnitType type);
-    BWAPI::Unit GetDepot();
+    std::optional<BWAPI::Unit> GetUnitOfType(BWAPI::UnitType type);
+    std::optional<BWAPI::Unit> GetDepot();
 
     bool BuildBuilding(BWAPI::UnitType type);
 

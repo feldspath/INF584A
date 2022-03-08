@@ -1,4 +1,5 @@
 #include "Task.h"
+#include "Tools.h"
 
 Task::Task() {}
 
@@ -10,10 +11,10 @@ bool ProductionTask::resolve() {
 	const int gas = BWAPI::Broodwar->self()->gas();
 
 	if (currentUnits < requiredUnits) {
-		const BWAPI::Unit depot = Tools::GetDepot();
+		const auto depot = Tools::GetDepot();
 		const BWAPI::UnitType worker = BWAPI::Broodwar->self()->getRace().getWorker();
-		if (depot && !depot->isTraining() && minerals >= worker.mineralPrice()) {
-			if (depot->train(worker)) BWAPI::Broodwar->printf("Started training new worker");
+		if (depot.has_value() && !depot.value()->isTraining() && minerals >= worker.mineralPrice()) {
+			if (depot.value()->train(worker)) BWAPI::Broodwar->printf("Started training new worker");
 		}
 		return false;
 	}
@@ -33,7 +34,22 @@ bool ProductionTask::resolve() {
 		return startedBuilding;
 	}
 	else {
-		// TODO : train troops
+		if (BWAPI::Broodwar->self()->getRace().getID() == BWAPI::Races::Zerg.getID()) {
+			const auto pool = BWAPI::UnitTypes::Enum::Zerg_Spawning_Pool;
+			if (!(Tools::GetUnitOfType(pool).has_value())) return false;
+		}
+
+		const auto unitBuilder = unitType.whatBuilds().first;
+		const auto buildUnit = Tools::GetUnitOfType(unitBuilder);
+		if (!(buildUnit.has_value())) return false;
+		else {
+			if (buildUnit.value()->train(unitType)) {
+				BWAPI::Broodwar->printf("Started training %s", unitType.getName().c_str());
+				inProgress = true;
+				return true;
+			}
+			return false;
+		}
 	}
 	return false;
 }

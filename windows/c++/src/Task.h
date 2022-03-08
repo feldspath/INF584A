@@ -13,8 +13,8 @@ protected:
 public:
 	Task();
 	Task(int requiredUnits_);
-	virtual bool isDone() const { return true; }
-	virtual bool resolve() { return false; }
+	virtual bool isDone() const = 0;
+	virtual bool resolve() = 0;
 	bool isInProgress() const { return inProgress; }
 };
 

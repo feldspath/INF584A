@@ -10,4 +10,5 @@ private:
 
 public:
 	const std::vector<Troop>& getTroops() const { return troops; }
+	void addUnit(const BWAPI::Unit& unit);
 };
