@@ -35,4 +35,5 @@ public:
 	void onUnitShow(BWAPI::Unit unit);
 	void onUnitHide(BWAPI::Unit unit);
 	void onUnitRenegade(BWAPI::Unit unit);
+	BWAPI::TilePosition getEnemyStartLocation();
 };

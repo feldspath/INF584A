@@ -38,13 +38,7 @@ void StarterBot::onFrame()
 	sendIdleWorkersToMinerals();
 
 	// Train more workers so we can gather more income
-	//trainAdditionalWorkers();
 	productionManager.update();
-	
-
-
-	// Build more supply if we are going to run out soon
-	//buildAdditionalSupply();
 
 	// Draw unit health bars, which brood war unfortunately does not do
 	Tools::DrawUnitHealthBars();
@@ -82,11 +76,11 @@ void StarterBot::trainAdditionalWorkers()
 	if (workersOwned < workersWanted)
 	{
 		// get the unit pointer to my depot
-		const BWAPI::Unit myDepot = Tools::GetDepot();
+		const auto myDepot = Tools::GetDepot();
 
 		// if we have a valid depot unit and it's currently not training something, train a worker
 		// there is no reason for a bot to ever use the unit queueing system, it just wastes resources
-		if (myDepot && !myDepot->isTraining()) { myDepot->train(workerType); }
+		if (myDepot.has_value() && !myDepot.value()->isTraining()) { myDepot.value()->train(workerType); }
 	}
 }
 
@@ -150,6 +144,7 @@ void StarterBot::onUnitCreate(BWAPI::Unit unit)
 // Called whenever a unit finished construction, with a pointer to the unit
 void StarterBot::onUnitComplete(BWAPI::Unit unit)
 {
+	if (!(unit->getType().canAttack())) return;
 	if (unit->canBuild()) {
 
 	}
@@ -162,7 +157,9 @@ void StarterBot::onUnitComplete(BWAPI::Unit unit)
 // This is usually triggered when units appear from fog of war and become visible
 void StarterBot::onUnitShow(BWAPI::Unit unit)
 {
-
+	const BWAPI::UnitType u = unit->getType();
+	if (unit->getPlayer()->getID() != BWAPI::Broodwar->self()->getID() && u.getRace() != BWAPI::Races::None)
+		printf("unit appeared of race %s\n", u.getRace().c_str());
 }
 
 // Called whenever a unit gets hidden, with a pointer to the destroyed unit
@@ -177,4 +174,13 @@ void StarterBot::onUnitHide(BWAPI::Unit unit)
 void StarterBot::onUnitRenegade(BWAPI::Unit unit)
 {
 
+}
+
+BWAPI::TilePosition StarterBot::getEnemyStartLocation() {
+	const auto startLocs = BWAPI::Broodwar->getStartLocations();
+	for (const auto& loc : startLocs) {
+		const auto& startLoc = BWAPI::Broodwar->self()->getStartLocation();
+		if (loc.x == startLoc.x && loc.y == startLoc.y) continue;
+		return loc;
+	}
 }

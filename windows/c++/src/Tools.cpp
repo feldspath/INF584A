@@ -1,4 +1,5 @@
 #include "Tools.h"
+#include <optional>
 
 BWAPI::Unit Tools::GetClosestUnitTo(BWAPI::Position p, const BWAPI::Unitset& units)
 {
@@ -35,23 +36,22 @@ int Tools::CountUnitsOfType(BWAPI::UnitType type, const BWAPI::Unitset& units)
     return sum;
 }
 
-BWAPI::Unit Tools::GetUnitOfType(BWAPI::UnitType type)
+std::optional<BWAPI::Unit> Tools::GetUnitOfType(BWAPI::UnitType type)
 {
     // For each unit that we own
     for (auto& unit : BWAPI::Broodwar->self()->getUnits())
     {
         // if the unit is of the correct type, and it actually has been constructed, return it
-        if (unit->getType() == type && unit->isCompleted())
+        if (unit->getType() == type && unit->isCompleted() && !unit->isMorphing())
         {
             return unit;
         }
     }
 
-    // If we didn't find a valid unit to return, make sure we return nullptr
-    return nullptr;
+    return std::nullopt;
 }
 
-BWAPI::Unit Tools::GetDepot()
+std::optional<BWAPI::Unit> Tools::GetDepot()
 {
     const BWAPI::UnitType depot = BWAPI::Broodwar->self()->getRace().getResourceDepot();
     return GetUnitOfType(depot);
