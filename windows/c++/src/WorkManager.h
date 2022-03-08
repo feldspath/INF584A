@@ -6,13 +6,12 @@
 
 class WorkManager {
 private:
-	std::vector<Worker> workers;
-
-	std::vector<Worker> miners;
-
+	std::vector<BWAPI::Unit> workers;
+	
+	size_t prop_gaz = 0;
 
 public:
-	void updateWorkersState();
-	void updateWorkersJob();
-	void assignNewWorker(BWAPI::Unit unit);
+	void change_prop(size_t new_prop);
+	void update();
+	void addWorker(BWAPI::Unit unit);
 };

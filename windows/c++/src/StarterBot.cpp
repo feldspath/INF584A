@@ -39,6 +39,8 @@ void StarterBot::onFrame()
 
 	// Train more workers so we can gather more income
 	productionManager.update();
+	workManager.update();
+
 
 	// Draw unit health bars, which brood war unfortunately does not do
 	Tools::DrawUnitHealthBars();
@@ -146,7 +148,7 @@ void StarterBot::onUnitComplete(BWAPI::Unit unit)
 {
 	if (!(unit->getType().canAttack())) return;
 	if (unit->canBuild()) {
-
+		workManager.addWorker(unit);
 	}
 	else {
 		troopManager.assignNewTroop(unit);
