@@ -4,16 +4,17 @@
 #include "Troop.h"
 #include <vector>
 #include <BWAPI.h>
+#include <optional>
 
 class TroopManager {
 private:
-	std::vector<Squad> squads;
+	Squad squad;
+	std::optional<int> previousTarget;
 
 	bool attacking = false;
 
 public:
 	TroopManager();
 	void update();
-	void launchAttack();
 	void assignNewTroop(BWAPI::Unit unit);
 };

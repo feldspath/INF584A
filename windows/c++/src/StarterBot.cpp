@@ -31,14 +31,15 @@ void StarterBot::onEnd(bool isWinner)
 // Called on each frame of the game
 void StarterBot::onFrame()
 {
+	if (BWAPI::Broodwar->isPaused()) return;
 	// Update our MapTools information
 	m_mapTools.onFrame();
 
 	// Send our idle workers to mine minerals so they don't just stand there
 	sendIdleWorkersToMinerals();
 
-	// Train more workers so we can gather more income
 	productionManager.update();
+	troopManager.update();
 
 	// Draw unit health bars, which brood war unfortunately does not do
 	Tools::DrawUnitHealthBars();
@@ -174,13 +175,4 @@ void StarterBot::onUnitHide(BWAPI::Unit unit)
 void StarterBot::onUnitRenegade(BWAPI::Unit unit)
 {
 
-}
-
-BWAPI::TilePosition StarterBot::getEnemyStartLocation() {
-	const auto startLocs = BWAPI::Broodwar->getStartLocations();
-	for (const auto& loc : startLocs) {
-		const auto& startLoc = BWAPI::Broodwar->self()->getStartLocation();
-		if (loc.x == startLoc.x && loc.y == startLoc.y) continue;
-		return loc;
-	}
 }

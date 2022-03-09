@@ -242,3 +242,12 @@ void Tools::DrawHealthBar(BWAPI::Unit unit, double ratio, BWAPI::Color color, in
         BWAPI::Broodwar->drawLineMap(BWAPI::Position(i, hpTop), BWAPI::Position(i, hpBottom), BWAPI::Colors::Black);
     }
 }
+
+BWAPI::TilePosition Tools::getEnemyStartLocation() {
+    const auto startLocs = BWAPI::Broodwar->getStartLocations();
+    for (const auto& loc : startLocs) {
+        const auto& startLoc = BWAPI::Broodwar->self()->getStartLocation();
+        if (loc.x == startLoc.x && loc.y == startLoc.y) continue;
+        return loc;
+    }
+}

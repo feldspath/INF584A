@@ -1,14 +1,17 @@
 #pragma once
 
 #include "Troop.h"
+#include <set>
 #include <vector>
 
-class Squad {
-private:
-	int id;
-	std::vector<Troop> troops;
-
-public:
-	const std::vector<Troop>& getTroops() const { return troops; }
+struct Squad {
+	float mergeDistance = 128;
+	float hostileDistance = 800;
+	BWAPI::Position center;
+	std::set<int> troops;
+	int frameCount = 10;
 	void addUnit(const BWAPI::Unit& unit);
+	void computeCenter();
+	BWAPI::Unitset getTroops();
+	void removeDeadTroops();
 };

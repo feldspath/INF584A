@@ -43,8 +43,9 @@ bool ProductionTask::resolve() {
 		const auto buildUnit = Tools::GetUnitOfType(unitBuilder);
 		if (!(buildUnit.has_value())) return false;
 		else {
-			if (buildUnit.value()->train(unitType)) {
-				BWAPI::Broodwar->printf("Started training %s", unitType.getName().c_str());
+			if (buildUnit.value()->canTrain() && buildUnit.value()->train(unitType)) {
+				printf("n larves: %d\n", Tools::CountUnitsOfType(BWAPI::UnitTypes::Zerg_Larva, BWAPI::Broodwar->self()->getUnits()));
+				printf("Started training %s with %s\n", unitType.getName().c_str(), buildUnit.value()->getType().getName().c_str());
 				inProgress = true;
 				return true;
 			}

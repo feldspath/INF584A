@@ -32,14 +32,22 @@ ProductionManager::ProductionManager() {
 	buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Zergling, 8, 0));
 	buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Zergling, 10, 0));
 	buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Zergling, 12, 0));
-	buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Overlord, 2, 0));
 
-	buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Zergling, 14, 0));
-	buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Zergling, 16, 0));
-	buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Zergling, 18, 0));
+	buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Overlord, 2, 9));
+	
+	int index = 7;
+	for (int i = 0; i < 100; ++i) {
+		for (int j = 0; j < 8; ++j)
+			buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Zergling, 2 * (index++), 0));
+	}
 }
 
 void ProductionManager::update() {
+	if (frameDelay > 0) {
+		--frameDelay;
+		return;
+	}
+	if (buildOrder.size() == 0) return;
 	auto task_it = buildOrder.begin();
 	while (task_it != buildOrder.end() && (*task_it)->isDone()) {
 		printf("task finished\n");
@@ -52,6 +60,7 @@ void ProductionManager::update() {
 	}
 	else {
 		(*task_it)->resolve();
+		frameDelay = 5;
 	}
 }
 

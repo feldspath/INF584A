@@ -3,9 +3,8 @@
 #include <BWAPI.h>
 
 class Unit {
-protected:
-	BWAPI::Unit unit;
 
 public:
+	BWAPI::Unit unit;
 	Unit(BWAPI::Unit _unit) : unit(_unit) {}
 };

@@ -7,6 +7,7 @@
 class ProductionManager {
 private:
 	std::vector<std::shared_ptr<Task>> buildOrder;
+	int frameDelay = 0;
 
 public:
 	ProductionManager();
