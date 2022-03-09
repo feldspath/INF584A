@@ -3,6 +3,7 @@
 #include "MapTools.h"
 #include "ProductionManager.h"
 #include "TroopManager.h"
+#include "WorkManager.h"
 
 #include <BWAPI.h>
 
@@ -12,6 +13,8 @@ private:
 	MapTools m_mapTools;
 	ProductionManager productionManager;
 	TroopManager troopManager;
+	WorkManager workManager;
+
 
 public:
 
