@@ -6,11 +6,17 @@
 
 class ProductionManager {
 private:
-	std::vector<std::shared_ptr<Task>> buildOrder;
+	enum class State {
+		PREPARE, ATTACK, DEFEND, ATTACKING
+	};
 
+	std::vector<std::shared_ptr<Task>> buildOrder;
+	int frameDelay = 0;
+	State state;
+	
 public:
 	ProductionManager();
 
-	void update();
+	void update(int nActiveUnits);
 	void addTask(std::shared_ptr<Task>& task);
 };

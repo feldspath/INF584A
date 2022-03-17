@@ -15,7 +15,11 @@ public:
 	Task(int requiredUnits_);
 	virtual bool isDone() const = 0;
 	virtual bool resolve() = 0;
-	bool isInProgress() const { return inProgress; }
+	void updateState() { if (isDone()) inProgress = false; }
+	bool isInProgress() const {
+		if (isDone()) false;
+		return inProgress;
+	}
 };
 
 class ProductionTask : public Task {

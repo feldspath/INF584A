@@ -1,11 +1,12 @@
 #pragma once
 
 #include <BWAPI.h>
+#include <optional>
 
 class Unit {
-protected:
-	BWAPI::Unit unit;
-
+	int id;
 public:
-	Unit(BWAPI::Unit _unit) : unit(_unit) {}
+	Unit(BWAPI::Unit unit) : id(unit->getID()) {}
+
+	std::optional<BWAPI::Unit> getUnit() const;
 };

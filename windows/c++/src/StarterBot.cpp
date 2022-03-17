@@ -31,17 +31,18 @@ void StarterBot::onEnd(bool isWinner)
 // Called on each frame of the game
 void StarterBot::onFrame()
 {
+	if (BWAPI::Broodwar->isPaused()) return;
 	// Update our MapTools information
 	m_mapTools.onFrame();
 
 
-	// Train more workers so we can gather more income
-	productionManager.update();
+	const int nActiveUnits = troopManager.update();
+	productionManager.update(nActiveUnits);
 	workManager.update();
 
 
 	// Draw unit health bars, which brood war unfortunately does not do
-	Tools::DrawUnitHealthBars();
+	Tools::drawUnitHealthBars();
 
 	// Draw some relevent information to the screen to help us debug the bot
 	drawDebugInformation();
@@ -59,10 +60,10 @@ void StarterBot::sendIdleWorkersToMinerals()
 		if (unit->getType().isWorker() && unit->isIdle())
 		{
 			// Get the closest mineral to this worker unit
-			BWAPI::Unit closestMineral = Tools::GetClosestUnitTo(unit, BWAPI::Broodwar->getMinerals());
+			const auto closestMineral = Tools::getClosestUnitTo(unit, BWAPI::Broodwar->getMinerals());
 
 			// If a valid mineral was found, right click it with the unit in order to start harvesting
-			if (closestMineral) { unit->rightClick(closestMineral); }
+			if (closestMineral.has_value()) { unit->rightClick(closestMineral.value()); }
 		}
 	}
 }
@@ -72,11 +73,11 @@ void StarterBot::trainAdditionalWorkers()
 {
 	const BWAPI::UnitType workerType = BWAPI::Broodwar->self()->getRace().getWorker();
 	const int workersWanted = 10;
-	const int workersOwned = Tools::CountUnitsOfType(workerType, BWAPI::Broodwar->self()->getUnits());
+	const int workersOwned = Tools::countUnitsOfType(workerType, BWAPI::Broodwar->self()->getUnits());
 	if (workersOwned < workersWanted)
 	{
 		// get the unit pointer to my depot
-		const auto myDepot = Tools::GetDepot();
+		const auto myDepot = Tools::getIdleDepot();
 
 		// if we have a valid depot unit and it's currently not training something, train a worker
 		// there is no reason for a bot to ever use the unit queueing system, it just wastes resources
@@ -88,7 +89,7 @@ void StarterBot::trainAdditionalWorkers()
 void StarterBot::buildAdditionalSupply()
 {
 	// Get the amount of supply supply we currently have unused
-	const int unusedSupply = Tools::GetTotalSupply(true) - BWAPI::Broodwar->self()->supplyUsed();
+	const int unusedSupply = Tools::getTotalSupply(true) - BWAPI::Broodwar->self()->supplyUsed();
 
 	// If we have a sufficient amount of supply, we don't need to do anything
 	if (unusedSupply >= 2) { return; }
@@ -96,7 +97,7 @@ void StarterBot::buildAdditionalSupply()
 	// Otherwise, we are going to build a supply provider
 	const BWAPI::UnitType supplyProviderType = BWAPI::Broodwar->self()->getRace().getSupplyProvider();
 
-	const bool startedBuilding = Tools::BuildBuilding(supplyProviderType);
+	const bool startedBuilding = Tools::buildBuilding(supplyProviderType);
 	if (startedBuilding)
 	{
 		BWAPI::Broodwar->printf("Started Building %s", supplyProviderType.getName().c_str());
@@ -107,8 +108,8 @@ void StarterBot::buildAdditionalSupply()
 void StarterBot::drawDebugInformation()
 {
 	BWAPI::Broodwar->drawTextScreen(BWAPI::Position(10, 10), "Hello, World!\n");
-	Tools::DrawUnitCommands();
-	Tools::DrawUnitBoundingBoxes();
+	Tools::drawUnitCommands();
+	Tools::drawUnitBoundingBoxes();
 }
 
 // Called whenever a unit is destroyed, with a pointer to the unit
@@ -144,12 +145,11 @@ void StarterBot::onUnitCreate(BWAPI::Unit unit)
 // Called whenever a unit finished construction, with a pointer to the unit
 void StarterBot::onUnitComplete(BWAPI::Unit unit)
 {
+	if (Tools::compareUnitTypes(unit->getType(), BWAPI::UnitTypes::Zerg_Overlord))
+		troopManager.addScout(unit);
 	if (!(unit->getType().canAttack())) return;
 	if (unit->canBuild()) {
 		workManager.addWorker(unit);
-	}
-	else {
-		troopManager.assignNewTroop(unit);
 	}
 }
 
@@ -174,13 +174,4 @@ void StarterBot::onUnitHide(BWAPI::Unit unit)
 void StarterBot::onUnitRenegade(BWAPI::Unit unit)
 {
 
-}
-
-BWAPI::TilePosition StarterBot::getEnemyStartLocation() {
-	const auto startLocs = BWAPI::Broodwar->getStartLocations();
-	for (const auto& loc : startLocs) {
-		const auto& startLoc = BWAPI::Broodwar->self()->getStartLocation();
-		if (loc.x == startLoc.x && loc.y == startLoc.y) continue;
-		return loc;
-	}
 }

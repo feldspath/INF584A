@@ -1,29 +1,24 @@
 #include "Tools.h"
 #include <optional>
 
-BWAPI::Unit Tools::GetClosestUnitTo(BWAPI::Position p, const BWAPI::Unitset& units)
-{
+std::optional<BWAPI::Unit> Tools::getClosestUnitTo(const BWAPI::Position p, const BWAPI::Unitset& units) {
     BWAPI::Unit closestUnit = nullptr;
 
-    for (auto& u : units)
-    {
-        if (!closestUnit || u->getDistance(p) < closestUnit->getDistance(p))
-        {
+    for (auto& u : units) {
+        if (!closestUnit || u->getDistance(p) < closestUnit->getDistance(p)) {
             closestUnit = u;
         }
     }
 
-    return closestUnit;
+    return closestUnit == nullptr ? std::nullopt : std::optional<BWAPI::Unit>(closestUnit);
 }
 
-BWAPI::Unit Tools::GetClosestUnitTo(BWAPI::Unit unit, const BWAPI::Unitset& units)
-{
-    if (!unit) { return nullptr; }
-    return GetClosestUnitTo(unit->getPosition(), units);
+std::optional<BWAPI::Unit> Tools::getClosestUnitTo(const BWAPI::Unit unit, const BWAPI::Unitset& units) {
+    if (!unit) { return std::nullopt; }
+    return getClosestUnitTo(unit->getPosition(), units);
 }
 
-int Tools::CountUnitsOfType(BWAPI::UnitType type, const BWAPI::Unitset& units)
-{
+int Tools::countUnitsOfType(BWAPI::UnitType type, const BWAPI::Unitset& units) {
     int sum = 0;
     for (auto& unit : units)
     {
@@ -36,14 +31,9 @@ int Tools::CountUnitsOfType(BWAPI::UnitType type, const BWAPI::Unitset& units)
     return sum;
 }
 
-std::optional<BWAPI::Unit> Tools::GetUnitOfType(BWAPI::UnitType type)
-{
-    // For each unit that we own
-    for (auto& unit : BWAPI::Broodwar->self()->getUnits())
-    {
-        // if the unit is of the correct type, and it actually has been constructed, return it
-        if (unit->getType() == type && unit->isCompleted() && !unit->isMorphing())
-        {
+std::optional<BWAPI::Unit> Tools::getIdleUnitOfType(BWAPI::UnitType type) {
+    for (auto& unit : BWAPI::Broodwar->self()->getUnits()) {
+        if (unit->getType() == type && unit->isIdle()) {
             return unit;
         }
     }
@@ -51,44 +41,64 @@ std::optional<BWAPI::Unit> Tools::GetUnitOfType(BWAPI::UnitType type)
     return std::nullopt;
 }
 
-std::optional<BWAPI::Unit> Tools::GetDepot()
-{
-    const BWAPI::UnitType depot = BWAPI::Broodwar->self()->getRace().getResourceDepot();
-    return GetUnitOfType(depot);
+std::optional<BWAPI::Unit> Tools::getUnitOfType(BWAPI::UnitType type) {
+    for (auto& unit : BWAPI::Broodwar->self()->getUnits()) {
+        if (unit->getType() == type) {
+            return unit;
+        }
+    }
+
+    return std::nullopt;
 }
 
-// Attempt tp construct a building of a given type 
-bool Tools::BuildBuilding(BWAPI::UnitType type)
+std::optional<BWAPI::Unit> Tools::getIdleDepot()
 {
+    const BWAPI::UnitType depot = BWAPI::Broodwar->self()->getRace().getResourceDepot();
+    return getIdleUnitOfType(depot);
+}
+
+bool Tools::buildBuilding(BWAPI::UnitType type, BWAPI::TilePosition pos) {
+    bool success = false;
+
+    // check cost requirements
+    const int minerals = BWAPI::Broodwar->self()->minerals();
+    const int gas = BWAPI::Broodwar->self()->gas();
+    if (minerals < type.mineralPrice() || gas < type.gasPrice()) return false;
+
     // Get the type of unit that is required to build the desired building
     const BWAPI::UnitType builderType = type.whatBuilds().first;
 
     // Get a unit that we own that is of the given type so it can build
     // If we can't find a valid builder unit, then we have to cancel the building
-    BWAPI::Unit builder = nullptr;
+    BWAPI::Unitset builders;
     for (auto& unit : BWAPI::Broodwar->self()->getUnits()) {
         // if the unit is of the correct type, and it actually has been constructed, return it
-        if (unit->getType() == builderType && unit->isCompleted() && unit->canBuild()) {
-            builder = unit;
-            break;
-        }
+        if (unit->getType() == builderType && unit->isCompleted() && unit->canBuild()) 
+            builders.insert(unit);
     }
-    if (!builder) {
+    const auto builder = getClosestUnitTo(BWAPI::Position(pos), builders);
+    if (!(builder.has_value())) {
         printf("no builder found\n");
         return false;
     }
 
-    // Get a location that we want to build the building next to
-    const BWAPI::TilePosition desiredPos = BWAPI::Broodwar->self()->getStartLocation();
+    success = builder.value()->build(type, pos);
 
-    // Ask BWAPI for a building location near the desired position for the type
-    const int maxBuildRange = 64;
+    // debug info
+    if (success) printf("Started building %s\n", type.getName().c_str());
+    else printf("Error while building %s\n", type.getName().c_str());
+
+    return success;
+}
+// Attempt to construct a building of a given type 
+bool Tools::buildBuilding(BWAPI::UnitType type) {
     const bool buildingOnCreep = type.requiresCreep();
-    const BWAPI::TilePosition buildPos = BWAPI::Broodwar->getBuildLocation(type, desiredPos, maxBuildRange, buildingOnCreep);
-    return builder->build(type, buildPos);
+    const auto desiredPos = BWAPI::Broodwar->self()->getStartLocation();
+    const int maxBuildRange = 64;
+    return buildBuilding(type, BWAPI::Broodwar->getBuildLocation(type, desiredPos, maxBuildRange, buildingOnCreep));
 }
 
-void Tools::DrawUnitCommands()
+void Tools::drawUnitCommands()
 {
     for (auto& unit : BWAPI::Broodwar->self()->getUnits())
     {
@@ -117,7 +127,7 @@ void Tools::DrawUnitCommands()
     }
 }
 
-void Tools::DrawUnitBoundingBoxes()
+void Tools::drawUnitBoundingBoxes()
 {
     for (auto& unit : BWAPI::Broodwar->getAllUnits())
     {
@@ -127,7 +137,7 @@ void Tools::DrawUnitBoundingBoxes()
     }
 }
 
-void Tools::SmartRightClick(BWAPI::Unit unit, BWAPI::Unit target)
+void Tools::smartRightClick(BWAPI::Unit unit, BWAPI::Unit target)
 {
     // if there's no valid unit, ignore the command
     if (!unit || !target) { return; }
@@ -143,7 +153,7 @@ void Tools::SmartRightClick(BWAPI::Unit unit, BWAPI::Unit target)
     unit->rightClick(target);
 }
 
-int Tools::GetTotalSupply(bool inProgress)
+int Tools::getTotalSupply(bool inProgress)
 {
     // start the calculation by looking at our current completed supplyt
     int totalSupply = BWAPI::Broodwar->self()->supplyTotal();
@@ -177,7 +187,7 @@ int Tools::GetTotalSupply(bool inProgress)
     return totalSupply;
 }
 
-void Tools::DrawUnitHealthBars()
+void Tools::drawUnitHealthBars()
 {
     // how far up from the unit to draw the health bar
     int verticalOffset = -10;
@@ -196,7 +206,7 @@ void Tools::DrawUnitHealthBars()
         if (unit->getType().isResourceContainer() && unit->getInitialResources() > 0)
         {
             double mineralRatio = (double)unit->getResources() / (double)unit->getInitialResources();
-            DrawHealthBar(unit, mineralRatio, BWAPI::Colors::Cyan, 0);
+            drawHealthBar(unit, mineralRatio, BWAPI::Colors::Cyan, 0);
         }
         // otherwise if it's a unit, draw the hp 
         else if (unit->getType().maxHitPoints() > 0)
@@ -205,19 +215,19 @@ void Tools::DrawUnitHealthBars()
             BWAPI::Color hpColor = BWAPI::Colors::Green;
             if (hpRatio < 0.66) hpColor = BWAPI::Colors::Orange;
             if (hpRatio < 0.33) hpColor = BWAPI::Colors::Red;
-            DrawHealthBar(unit, hpRatio, hpColor, 0);
+            drawHealthBar(unit, hpRatio, hpColor, 0);
             
             // if it has shields, draw those too
             if (unit->getType().maxShields() > 0)
             {
                 double shieldRatio = (double)unit->getShields() / (double)unit->getType().maxShields();
-                DrawHealthBar(unit, shieldRatio, BWAPI::Colors::Blue, -3);
+                drawHealthBar(unit, shieldRatio, BWAPI::Colors::Blue, -3);
             }
         }
     }
 }
 
-void Tools::DrawHealthBar(BWAPI::Unit unit, double ratio, BWAPI::Color color, int yOffset)
+void Tools::drawHealthBar(BWAPI::Unit unit, double ratio, BWAPI::Color color, int yOffset)
 {
     int verticalOffset = -10;
     const BWAPI::Position& pos = unit->getPosition();
@@ -241,4 +251,56 @@ void Tools::DrawHealthBar(BWAPI::Unit unit, double ratio, BWAPI::Color color, in
     {
         BWAPI::Broodwar->drawLineMap(BWAPI::Position(i, hpTop), BWAPI::Position(i, hpBottom), BWAPI::Colors::Black);
     }
+}
+
+BWAPI::TilePosition Tools::getEnemyStartLocation() {
+    const auto startLocs = BWAPI::Broodwar->getStartLocations();
+    for (const auto& loc : startLocs) {
+        const auto& startLoc = BWAPI::Broodwar->self()->getStartLocation();
+        if (loc.x == startLoc.x && loc.y == startLoc.y) continue;
+        return loc;
+    }
+}
+
+bool Tools::trainTroop(BWAPI::UnitType unitType) {
+    bool success = false;
+    // check cost requirements
+    const int minerals = BWAPI::Broodwar->self()->minerals();
+    const int gas = BWAPI::Broodwar->self()->gas();
+    if (minerals < unitType.mineralPrice() || gas < unitType.gasPrice()) return false;
+
+    // zerg special case: when playing zerg, spawning pool is required but is not what builds the unit.
+    if (BWAPI::Broodwar->self()->getRace().getID() == BWAPI::Races::Zerg.getID()) {
+        const auto pool = BWAPI::UnitTypes::Enum::Zerg_Spawning_Pool;
+        if (!(Tools::getIdleUnitOfType(pool).has_value())) return false;
+    }
+
+    // builderUnitType =
+    // Zergs: Larva
+    // Terran: Barracks
+    // Protoss: Gateway
+    const auto builderUnitType = unitType.whatBuilds().first;
+    const auto buildUnit = Tools::getIdleUnitOfType(builderUnitType);
+    if (!(buildUnit.has_value())) return false;
+    if (buildUnit.has_value() && buildUnit.value()->canTrain() && buildUnit.value()->train(unitType)) success = true;
+
+    // debug info
+    if (success) printf("Started training %s\n", unitType.getName().c_str());
+    else printf("Error while training %s: %d/%d\n", unitType.getName().c_str(), BWAPI::Broodwar->self()->supplyUsed(), BWAPI::Broodwar->self()->supplyTotal());
+
+    return success;
+}
+
+BWAPI::TilePosition Tools::getPoolPlacement() {
+    const auto pos = BWAPI::Broodwar->self()->getStartLocation() + BWAPI::TilePosition(0, -2);
+    const auto type = BWAPI::UnitTypes::Zerg_Spawning_Pool;
+    const bool buildingOnCreep = type.requiresCreep();
+    const auto desiredPos = BWAPI::Broodwar->self()->getStartLocation();
+    const int maxBuildRange = 64;
+    if (BWAPI::Broodwar->canBuildHere(pos, type)) return pos;
+    else return BWAPI::Broodwar->getBuildLocation(type, desiredPos, maxBuildRange, buildingOnCreep);
+}
+
+bool Tools::compareUnitTypes(BWAPI::UnitType t1, BWAPI::UnitType t2) {
+    return t1.getID() == t2.getID();
 }

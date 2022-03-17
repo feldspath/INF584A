@@ -12,13 +12,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\Grid.hpp" />
+    <ClInclude Include="..\src\Header.h" />
     <ClInclude Include="..\src\MapTools.h" />
     <ClInclude Include="..\src\ProductionManager.h" />
+    <ClInclude Include="..\src\Scout.h" />
     <ClInclude Include="..\src\Squad.h" />
     <ClInclude Include="..\src\StarterBot.h" />
     <ClInclude Include="..\src\Task.h" />
     <ClInclude Include="..\src\Tools.h" />
-    <ClInclude Include="..\src\Troop.h" />
     <ClInclude Include="..\src\TroopManager.h" />
     <ClInclude Include="..\src\Unit.h" />
     <ClInclude Include="..\src\Worker.h" />
@@ -28,12 +29,14 @@
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\MapTools.cpp" />
     <ClCompile Include="..\src\ProductionManager.cpp" />
+    <ClCompile Include="..\src\Scout.cpp" />
     <ClCompile Include="..\src\Squad.cpp" />
     <ClCompile Include="..\src\StarterBot.cpp" />
     <ClCompile Include="..\src\Task.cpp" />
     <ClCompile Include="..\src\Tools.cpp" />
     <ClCompile Include="..\src\TroopManager.cpp" />
     <ClCompile Include="..\src\WorkManager.cpp" />
+    <ClCompile Include="..\src\Unit.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectName>StarterBot</ProjectName>
