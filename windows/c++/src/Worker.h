@@ -5,7 +5,7 @@
 #include "Unit.h"
 
 enum class WorkState {
-	BUILD, MINE, REPAIR, DEFEND, IDLE
+	WORK, FLEE
 };
 
 
@@ -15,5 +15,5 @@ private:
 	WorkState state;
 
 public:
-	Worker(BWAPI::Unit _unit) : Unit(_unit), state(WorkState::IDLE) {}
+	Worker(BWAPI::Unit _unit) : Unit(_unit), state(WorkState::WORK) {}
 };

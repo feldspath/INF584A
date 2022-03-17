@@ -21,6 +21,8 @@
     <ClInclude Include="..\src\Troop.h" />
     <ClInclude Include="..\src\TroopManager.h" />
     <ClInclude Include="..\src\Unit.h" />
+    <ClInclude Include="..\src\Worker.h" />
+    <ClInclude Include="..\src\WorkManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\main.cpp" />
@@ -31,6 +33,7 @@
     <ClCompile Include="..\src\Task.cpp" />
     <ClCompile Include="..\src\Tools.cpp" />
     <ClCompile Include="..\src\TroopManager.cpp" />
+    <ClCompile Include="..\src\WorkManager.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectName>StarterBot</ProjectName>

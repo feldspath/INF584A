@@ -34,8 +34,6 @@ void StarterBot::onFrame()
 	// Update our MapTools information
 	m_mapTools.onFrame();
 
-	// Send our idle workers to mine minerals so they don't just stand there
-	sendIdleWorkersToMinerals();
 
 	// Train more workers so we can gather more income
 	productionManager.update();
