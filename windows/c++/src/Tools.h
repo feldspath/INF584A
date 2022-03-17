@@ -5,25 +5,32 @@
 
 namespace Tools
 {
-    BWAPI::Unit GetClosestUnitTo(BWAPI::Position p, const BWAPI::Unitset& units);
-    BWAPI::Unit GetClosestUnitTo(BWAPI::Unit unit, const BWAPI::Unitset& units);
+    std::optional<BWAPI::Unit> getClosestUnitTo(const BWAPI::Position p, const BWAPI::Unitset& units);
+    std::optional<BWAPI::Unit> getClosestUnitTo(const BWAPI::Unit unit, const BWAPI::Unitset& units);
 
-    int CountUnitsOfType(BWAPI::UnitType type, const BWAPI::Unitset& units);
+    int countUnitsOfType(BWAPI::UnitType type, const BWAPI::Unitset& units);
 
-    std::optional<BWAPI::Unit> GetUnitOfType(BWAPI::UnitType type);
-    std::optional<BWAPI::Unit> GetDepot();
+    std::optional<BWAPI::Unit> getIdleUnitOfType(BWAPI::UnitType type);
+    std::optional<BWAPI::Unit> getUnitOfType(BWAPI::UnitType type);
+    std::optional<BWAPI::Unit> getIdleDepot();
 
-    bool BuildBuilding(BWAPI::UnitType type);
+    bool buildBuilding(BWAPI::UnitType type, BWAPI::TilePosition pos);
+    bool buildBuilding(BWAPI::UnitType type);
 
-    void DrawUnitBoundingBoxes();
-    void DrawUnitCommands();
+    void drawUnitBoundingBoxes();
+    void drawUnitCommands();
 
-    void SmartRightClick(BWAPI::Unit unit, BWAPI::Unit target);
+    void smartRightClick(BWAPI::Unit unit, BWAPI::Unit target);
 
-    int GetTotalSupply(bool inProgress = false);
+    int getTotalSupply(bool inProgress = false);
 
-    void DrawUnitHealthBars();
-    void DrawHealthBar(BWAPI::Unit unit, double ratio, BWAPI::Color color, int yOffset);
+    void drawUnitHealthBars();
+    void drawHealthBar(BWAPI::Unit unit, double ratio, BWAPI::Color color, int yOffset);
+
+    bool trainTroop(BWAPI::UnitType);
 
     BWAPI::TilePosition getEnemyStartLocation();
+    BWAPI::TilePosition getPoolPlacement();
+
+    bool compareUnitTypes(BWAPI::UnitType t1, BWAPI::UnitType t2);
 }

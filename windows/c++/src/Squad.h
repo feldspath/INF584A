@@ -1,17 +1,29 @@
 #pragma once
 
-#include "Troop.h"
+#include "Unit.h"
 #include <set>
 #include <vector>
+#include <optional>
 
-struct Squad {
+class Squad {
+private:
 	float mergeDistance = 128;
 	float hostileDistance = 800;
+
 	BWAPI::Position center;
 	std::set<int> troops;
-	int frameCount = 10;
+	std::optional<Unit> previousTarget = std::nullopt;
+	std::optional<BWAPI::Unit> previousTargetUnit;
+
+public:
 	void addUnit(const BWAPI::Unit& unit);
-	void computeCenter();
-	BWAPI::Unitset getTroops();
-	void removeDeadTroops();
+	int update();
+	bool tryAddUnit(const BWAPI::Unit& unit);
+	BWAPI::Position getCenter() const;
+	BWAPI::Unitset getTroops() const;
+	std::optional<BWAPI::Unit> getPreviousUnit() const;
+	void updatePreviousTarget(std::optional<BWAPI::Unit> target);
+
+	// returns total damage per frame
+	float getDPSEstimate() const;
 };

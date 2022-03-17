@@ -2,138 +2,159 @@
 
 #include <BWAPI.h>
 #include <optional>
+#include <algorithm>
+#include <iterator>
 #include "Tools.h"
 
+int TroopManager::update() {
+	for (auto& scout : scouts) scout.update();
 
-TroopManager::TroopManager() {
-	previousTarget = std::nullopt;
-}
+	const int nActiveUnits = squad.update();
 
-static int targetUnitPriority(BWAPI::Unit unit) {
-	if ((!BWAPI::Filter::IsWorker && !BWAPI::Filter::IsBuilding)(unit)) return 2;
-	if ((BWAPI::Filter::IsWorker)(unit)) return 1;
-	else return 0;
-}
-
-BWAPI::Unit getClosest(const BWAPI::Unitset& set, BWAPI::Position pos) {
-	if (set.size() == 0) return nullptr;
-	auto it = set.begin();
-	BWAPI::Unit closest = *it;
-	float minDist = pos.getDistance(closest->getPosition());
-	for (; it != set.end(); ++it) {
-		if ((*it)->getType().getID() == BWAPI::UnitTypes::Resource_Vespene_Geyser.getID()) continue;
-		if (minDist > pos.getDistance((*it)->getPosition())) {
-			minDist = pos.getDistance((*it)->getPosition());
-			closest = *it;
-		}
-	}
-	return closest;
-}
-
-BWAPI::Unitset getTroops(BWAPI::Unitset& alls) {
-	BWAPI::Unitset result;
-	for (const auto& unit : alls) {
-		if (unit->getType().canAttack() && unit->getPlayer()->getID() == BWAPI::Broodwar->enemy()->getID() && !(unit->getType().isWorker()) && !(unit->getType().isBuilding()) && !(unit->getType().isFlyer()) && unit->getType().getID() != BWAPI::UnitTypes::Resource_Vespene_Geyser.getID())
-			result.insert(unit);
-	}
-	return result;
-}
-
-BWAPI::Unitset getWorkers(BWAPI::Unitset& alls) {
-	BWAPI::Unitset result;
-	for (const auto& unit : alls) {
-		if (unit->getPlayer()->getID() == BWAPI::Broodwar->enemy()->getID() && unit->getType().isWorker() && !(unit->getType().isFlyer()) && unit->getType().getID() != BWAPI::UnitTypes::Resource_Vespene_Geyser.getID())
-			result.insert(unit);
-	}
-	return result;
-}
-
-BWAPI::Unitset getBuildings(BWAPI::Unitset& alls) {
-	BWAPI::Unitset result;
-	for (const auto& unit : alls) {
-		if (unit->getPlayer()->getID() == BWAPI::Broodwar->enemy()->getID() && unit->getType().isBuilding() && !(unit->getType().isFlyer()) && unit->getType().getID() != BWAPI::UnitTypes::Resource_Vespene_Geyser.getID())
-			result.insert(unit);
-	}
-	return result;
-}
-
-void TroopManager::update() {
-	--squad.frameCount;
-	squad.removeDeadTroops();
-	squad.computeCenter();
+	// update troops: every military unit try to join the squad
 	for (const auto& unit : BWAPI::Broodwar->self()->getUnits()) {
 		if ((!BWAPI::Filter::CanAttack || BWAPI::Filter::IsWorker || !BWAPI::Filter::IsCompleted)(unit)) continue;
-		if (squad.troops.size() == 0) {
-			squad.addUnit(unit);
-			squad.center = unit->getPosition();
-			continue;
-		}
-		if (BWAPI::Position(unit->getPosition()).getDistance(squad.center) < squad.mergeDistance) {
-			squad.addUnit(unit);
-		}
-		else {
-			unit->move(squad.center);
-		}
+		if (!(squad.tryAddUnit(unit)) && (unit->isIdle() || BWAPI::Broodwar->getFrameCount() % 20 == 0)) unit->attack(squad.getCenter());
 	}
 
-	std::optional<BWAPI::Unit> previousTargetUnit;
-	if (previousTarget.has_value()) {
-		for (const auto& unit : BWAPI::Broodwar->getAllUnits()) {
-			if (unit->getID() == previousTarget.value()) {
-				previousTargetUnit = unit;
-				break;
+	// decision tree
+	BWAPI::Unit target =
+		getClosestHealingUnit().value_or(
+			getDangerousEnemyUnit().value_or(
+				getLowLifePreviousUnit().value_or(
+					getClosestOffensiveUnit().value_or(
+						getPreviousUnit().value_or(
+							getClosetWorker().value_or(
+								getClosetUnit().value_or(
+									getClosestGarbage().value_or(nullptr))))))));
+
+	if (target == nullptr) {
+		// no target found: go to the enemy base
+		const auto enemyBase = BWAPI::Position(Tools::getEnemyStartLocation());
+		for (const auto& unit : squad.getTroops()) {
+			if (BWAPI::Broodwar->getFrameCount() % 20 == 0 || unit->isIdle()) {
+				unit->attack(enemyBase);
 			}
 		}
-	}
-
-	std::optional<BWAPI::Unit> newTargetUnit;
-	//const auto enemyTroops = BWAPI::Broodwar->getUnitsInRadius(squad.center, squad.hostileDistance, BWAPI::Filter::IsEnemy && !(BWAPI::Filter::IsWorker) && !(BWAPI::Filter::IsBuilding) && !(BWAPI::Filter::IsFlyer));
-	//const auto enemyWorkers = BWAPI::Broodwar->getUnitsInRadius(squad.center, squad.hostileDistance, BWAPI::Filter::IsEnemy && BWAPI::Filter::IsWorker);
-	//const auto enemyBuildings = BWAPI::Broodwar->getUnitsInRadius(squad.center, squad.hostileDistance, BWAPI::Filter::IsEnemy && BWAPI::Filter::IsBuilding);
-	const auto enemyTroops = getTroops(BWAPI::Broodwar->getUnitsInRadius(squad.center, squad.hostileDistance));
-	const auto enemyWorkers = getWorkers(BWAPI::Broodwar->getUnitsInRadius(squad.center, squad.hostileDistance));
-	const auto enemyBuildings = getBuildings(BWAPI::Broodwar->getUnitsInRadius(squad.center, squad.hostileDistance));
-
-	if (enemyTroops.size() > 0) {
-		newTargetUnit = getClosest(enemyTroops, squad.center);
-	}
-	else if (enemyWorkers.size() > 0) {
-		newTargetUnit = getClosest(enemyWorkers, squad.center);
-		printf("worker found\n");
-	}
-	else if (enemyBuildings.size() > 0) {
-		newTargetUnit = getClosest(enemyBuildings, squad.center);
-		printf("building found: %s\n", newTargetUnit.value()->getType().getName().c_str());
-	}
-
-	if (newTargetUnit.has_value() && previousTargetUnit.has_value() && targetUnitPriority(previousTargetUnit.value()) >= targetUnitPriority(newTargetUnit.value()))
-	{
-		newTargetUnit = previousTargetUnit.value();
-	}
-
-	if (!(newTargetUnit.has_value())) {
-		squad.getTroops().move(BWAPI::Position(Tools::getEnemyStartLocation()));
 	}
 	else {
-		BWAPI::Broodwar->setLocalSpeed(67);
-		int attackingUnits = 0;
+		//BWAPI::Broodwar->setLocalSpeed(67);
+		// if the target building is being repaired, switch to the unit repairing it
+		if (target->getType().isBuilding() && target->isBeingHealed()) target = getHealingSCV(target).value_or(target);
+
+		bool printed = false;
 		for (const auto& unit : squad.getTroops()) {
-			if (squad.frameCount == 0) {
-				unit->rightClick(newTargetUnit.value()->getPosition() + BWAPI::Position(0, -64));
-				continue;
+			if (BWAPI::Broodwar->getFrameCount() % 20 == 0 || unit->isIdle() || !(squad.getPreviousUnit().has_value()) || target->getID() != squad.getPreviousUnit().value()->getID()) {
+				unit->attack(target);
+				if (!printed) {
+					printf("attacking %s\n", target->getType().getName().c_str());
+					printed = true;
+				}
 			}
-			if (unit->isAttacking()) ++attackingUnits;
-			unit->rightClick(newTargetUnit.value());
-			//unit->attack(newTargetUnit.value());
 		}
-		printf("not attacking: %d\n", squad.troops.size() - attackingUnits);
-		previousTarget = newTargetUnit.value()->getID();
 	}
-	if (squad.frameCount == 0) {
-		squad.frameCount = 30;
-	}
+	squad.updatePreviousTarget(target == nullptr ? std::nullopt : std::optional<BWAPI::Unit>(target));
+
+	return nActiveUnits;
 }
 
-void TroopManager::assignNewTroop(BWAPI::Unit unit) {
-	//squad.addUnit(unit);
+static bool isInRange(const BWAPI::Unit enemy, const BWAPI::Unit troop) {
+	return enemy->getDistance(troop->getPosition()) < enemy->getType().seekRange();
+}
+
+static bool isLoadedBunker(const BWAPI::Unit unit) {
+	return Tools::compareUnitTypes(unit->getType(), BWAPI::UnitTypes::Terran_Bunker) && unit->getLoadedUnits().size() > 0;
+}
+
+static bool isOffensive(const BWAPI::Unit unit) {
+	return unit->exists() && (unit->getType().groundWeapon().targetsGround() || isLoadedBunker(unit)) && !(unit->getType().isWorker()) && !(unit->isFlying());
+}
+
+static bool isGarbage(const BWAPI::Unit unit) {
+	return Tools::compareUnitTypes(BWAPI::UnitTypes::Zerg_Larva, unit->getType()) || Tools::compareUnitTypes(BWAPI::UnitTypes::Zerg_Egg, unit->getType());
+}
+
+std::optional<BWAPI::Unit> TroopManager::getClosestHealingUnit() const {
+	BWAPI::Unitset healingUnits;
+	for (const auto& enemy : BWAPI::Broodwar->enemy()->getUnits()) {
+		if (enemy->getType().getID() == BWAPI::UnitTypes::Terran_Medic.getID())
+			healingUnits.insert(enemy);
+	}
+	return Tools::getClosestUnitTo(squad.getCenter(), healingUnits);
+}
+
+
+std::optional<BWAPI::Unit> TroopManager::getDangerousEnemyUnit() const {
+	// returns previous unit if it can hit a unit of the squad
+	const auto previousUnit = squad.getPreviousUnit();
+	if (previousUnit.has_value() && isOffensive(previousUnit.value())) {
+		for (const auto& troop : squad.getTroops()) {
+			if (isInRange(previousUnit.value(), troop))
+				return previousUnit;
+		}
+	}
+
+	// otherwise returns closest unit that can hit a unit of the squad
+	BWAPI::Unitset dangerousUnits;
+	for (const auto& enemy : BWAPI::Broodwar->enemy()->getUnits()) {
+		if (!(isOffensive(enemy))) continue;
+		for (const auto& troop : squad.getTroops())
+			if (isInRange(enemy, troop)) dangerousUnits.insert(enemy);
+	}
+	return Tools::getClosestUnitTo(squad.getCenter(), dangerousUnits);
+}
+
+std::optional<BWAPI::Unit> TroopManager::getLowLifePreviousUnit() const {
+	const auto previousUnit = squad.getPreviousUnit();
+	if (!(previousUnit.has_value())) return std::nullopt;
+	if (squad.getDPSEstimate() * 50 > previousUnit.value()->getHitPoints()) return previousUnit;
+	return std::nullopt;
+}
+
+std::optional<BWAPI::Unit> TroopManager::getClosestOffensiveUnit() const {
+	BWAPI::Unitset offensiveUnits;
+	for (const auto& enemy : BWAPI::Broodwar->enemy()->getUnits())
+		if (isOffensive(enemy)) offensiveUnits.insert(enemy);
+
+	return Tools::getClosestUnitTo(squad.getCenter(), offensiveUnits);
+}
+
+std::optional<BWAPI::Unit> TroopManager::getPreviousUnit() const {
+	return squad.getPreviousUnit();
+}
+
+std::optional<BWAPI::Unit> TroopManager::getClosetWorker() const {
+	BWAPI::Unitset enemyWorkers;
+	for (const auto& enemy : BWAPI::Broodwar->enemy()->getUnits())
+		if (enemy->getType().isWorker()) enemyWorkers.insert(enemy);
+
+	return Tools::getClosestUnitTo(squad.getCenter(), enemyWorkers);
+}
+
+std::optional<BWAPI::Unit> TroopManager::getClosetUnit() const {
+	BWAPI::Unitset enemyUnits;
+	for (const auto& enemy : BWAPI::Broodwar->enemy()->getUnits())
+		if (!isGarbage(enemy) && enemy->exists() && !(enemy->isFlying()) && enemy->exists()) enemyUnits.insert(enemy);
+
+	return Tools::getClosestUnitTo(squad.getCenter(), enemyUnits);
+}
+
+std::optional<BWAPI::Unit> TroopManager::getHealingSCV(BWAPI::Unit building) const {
+	for (const auto& enemy : BWAPI::Broodwar->enemy()->getUnits()) {
+		if (enemy->getType().getID() == BWAPI::UnitTypes::Terran_SCV && enemy->isRepairing() && enemy->getTarget()->getID() == building->getID())
+			return enemy;
+	}
+	return std::nullopt;
+}
+
+std::optional<BWAPI::Unit> TroopManager::getClosestGarbage() const {
+	BWAPI::Unitset larvae;
+	for (const auto& enemy : BWAPI::Broodwar->enemy()->getUnits())
+		if (isGarbage(enemy) && enemy->exists()) larvae.insert(enemy);
+
+	return Tools::getClosestUnitTo(squad.getCenter(), larvae);
+}
+
+void TroopManager::addScout(BWAPI::Unit unit) {
+	scouts.emplace_back<Scout>(unit);
 }
