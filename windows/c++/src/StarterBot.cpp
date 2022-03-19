@@ -38,8 +38,8 @@ void StarterBot::onFrame()
 	// Send our idle workers to mine minerals so they don't just stand there
 	sendIdleWorkersToMinerals();
 
-	const int nActiveUnits = troopManager.update();
-	productionManager.update(nActiveUnits);
+	troopManager.update();
+	productionManager.update();
 	//workManager.update();
 
 
@@ -141,7 +141,7 @@ void StarterBot::onSendText(std::string text)
 // so this will trigger when you issue the build command for most units
 void StarterBot::onUnitCreate(BWAPI::Unit unit)
 {
-
+	productionManager.resetOrder();
 }
 
 // Called whenever a unit finished construction, with a pointer to the unit

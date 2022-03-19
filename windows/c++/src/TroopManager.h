@@ -24,6 +24,6 @@ private:
 	std::optional<BWAPI::Unit> getClosestGarbage() const;
 
 public:
-	int update();
+	void update();
 	void addScout(BWAPI::Unit unit);
 };

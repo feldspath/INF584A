@@ -22,7 +22,7 @@ int Tools::countUnitsOfType(BWAPI::UnitType type, const BWAPI::Unitset& units) {
     int sum = 0;
     for (auto& unit : units)
     {
-        if (unit->getType() == type)
+        if (unit->getType() == type && unit->exists())
         {
             sum++;
         }
@@ -81,12 +81,14 @@ bool Tools::buildBuilding(BWAPI::UnitType type, BWAPI::TilePosition pos) {
         printf("no builder found\n");
         return false;
     }
-
-    success = builder.value()->build(type, pos);
+    if (builder.value()->getType().isWorker())
+        success = builder.value()->build(type, pos);
+    else
+        success = builder.value()->morph(type);
 
     // debug info
     if (success) printf("Started building %s\n", type.getName().c_str());
-    else printf("Error while building %s\n", type.getName().c_str());
+    else printf("Error while building %s with %s (morpher:%d)\n", type.getName().c_str(), builder.value()->getType().getName().c_str(), builder.value()->canMorph());
 
     return success;
 }
@@ -270,7 +272,7 @@ bool Tools::trainTroop(BWAPI::UnitType unitType) {
     if (minerals < unitType.mineralPrice() || gas < unitType.gasPrice()) return false;
 
     // zerg special case: when playing zerg, spawning pool is required but is not what builds the unit.
-    if (BWAPI::Broodwar->self()->getRace().getID() == BWAPI::Races::Zerg.getID()) {
+    if (!(Tools::compareUnitTypes(unitType, BWAPI::UnitTypes::Zerg_Overlord)) && BWAPI::Broodwar->self()->getRace().getID() == BWAPI::Races::Zerg.getID()) {
         const auto pool = BWAPI::UnitTypes::Enum::Zerg_Spawning_Pool;
         if (!(Tools::getIdleUnitOfType(pool).has_value())) return false;
     }
@@ -303,4 +305,15 @@ BWAPI::TilePosition Tools::getPoolPlacement() {
 
 bool Tools::compareUnitTypes(BWAPI::UnitType t1, BWAPI::UnitType t2) {
     return t1.getID() == t2.getID();
+}
+
+void Tools::createWorker() {
+    const int minerals = BWAPI::Broodwar->self()->minerals();
+    const BWAPI::UnitType worker = BWAPI::Broodwar->self()->getRace().getWorker();
+    if (minerals < worker.mineralPrice()) return;
+
+    const auto depot = Tools::getIdleDepot();
+    if (depot.has_value() && depot.value()->train(worker)) {
+        printf("Started training new worker\n");
+    }
 }
