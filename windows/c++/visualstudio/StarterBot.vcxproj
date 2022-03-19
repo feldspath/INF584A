@@ -22,6 +22,8 @@
     <ClInclude Include="..\src\Tools.h" />
     <ClInclude Include="..\src\TroopManager.h" />
     <ClInclude Include="..\src\Unit.h" />
+    <ClInclude Include="..\src\Worker.h" />
+    <ClInclude Include="..\src\WorkManager.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\main.cpp" />
@@ -33,6 +35,7 @@
     <ClCompile Include="..\src\Task.cpp" />
     <ClCompile Include="..\src\Tools.cpp" />
     <ClCompile Include="..\src\TroopManager.cpp" />
+    <ClCompile Include="..\src\WorkManager.cpp" />
     <ClCompile Include="..\src\Unit.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

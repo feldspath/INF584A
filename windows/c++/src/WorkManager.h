@@ -8,7 +8,7 @@ class WorkManager {
 private:
 	std::vector<BWAPI::Unit> workers;
 	
-	size_t prop_gaz = 0;
+	size_t prop_gaz = 0.5;
 
 public:
 	void change_prop(size_t new_prop);

@@ -35,8 +35,6 @@ void StarterBot::onFrame()
 	// Update our MapTools information
 	m_mapTools.onFrame();
 
-	// Send our idle workers to mine minerals so they don't just stand there
-	sendIdleWorkersToMinerals();
 
 	troopManager.update();
 	productionManager.update();
@@ -149,22 +147,19 @@ void StarterBot::onUnitComplete(BWAPI::Unit unit)
 {
 	if (Tools::compareUnitTypes(unit->getType(), BWAPI::UnitTypes::Zerg_Overlord))
 		troopManager.addScout(unit);
-	//if (!(unit->getType().canAttack())) return;
-	//if (unit->canBuild()) {
-	//	//workManager.addWorker(unit);
-	//}
-	//else {
-
-	//}
+	if (!(unit->getType().canAttack())) return;
+	if (unit->canBuild()) {
+		workManager.addWorker(unit);
+	}
 }
 
 // Called whenever a unit appears, with a pointer to the destroyed unit
 // This is usually triggered when units appear from fog of war and become visible
 void StarterBot::onUnitShow(BWAPI::Unit unit)
 {
-	//const BWAPI::UnitType u = unit->getType();
-	//if (unit->getPlayer()->getID() != BWAPI::Broodwar->self()->getID() && u.getRace() != BWAPI::Races::None)
-	//	printf("unit appeared of race %s\n", u.getRace().c_str());
+	const BWAPI::UnitType u = unit->getType();
+	if (unit->getPlayer()->getID() != BWAPI::Broodwar->self()->getID() && u.getRace() != BWAPI::Races::None)
+		printf("unit appeared of race %s\n", u.getRace().c_str());
 }
 
 // Called whenever a unit gets hidden, with a pointer to the destroyed unit
