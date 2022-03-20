@@ -16,17 +16,6 @@ void WorkManager::update()
 	size_t n_mine = 0;
 
 
-	if (state == WorkState::FLEE) {
-		const auto botBase = BWAPI::Broodwar->self()->getStartLocation();
-		BWAPI::TilePosition off = { 60, -5 };
-		botBase + BWAPI::TilePosition(-off.x, -off.y);
-		for (auto& unit : workers) {
-			unit->move(BWAPI::Position(4600, 56));
-		}
-		return;
-		
-	}
-
 	for (auto& unit : workers) {
 
 
@@ -37,6 +26,7 @@ void WorkManager::update()
 			n_mine += 1;
 		}
 		if (unit->isIdle()) {
+			std::cout << "yo" << std::endl;
 			BWAPI::Unit closestMineral = Tools::getClosestUnitTo(unit, BWAPI::Broodwar->getMinerals()).value();
 			if (closestMineral) { unit->rightClick(closestMineral); }
 			n_mine += 1;
@@ -59,9 +49,8 @@ void WorkManager::update()
 	if (n_double / N_double <= prop_gaz) {
 		for (auto& unit : workers) {
 			if (unit->isGatheringMinerals()) {
-				BWAPI::Unit closestMineral = Tools::getClosestUnitTo(unit, BWAPI::Broodwar->getMinerals()).value();
-				if (closestMineral) { unit->rightClick(closestMineral); }
-				n_gaz += 1;
+				BWAPI::Unit closestGeyser = Tools::getUnitOfType(BWAPI::UnitTypes::Zerg_Extractor).value();
+				if (closestGeyser) { unit->rightClick(closestGeyser); n_double += 1.0;}
 			}
 
 
@@ -74,10 +63,10 @@ void WorkManager::update()
 	}
 	else{
 		for (auto& unit : workers) {
-			if (unit->isGatheringMinerals()) {
-				BWAPI::Unit closestGeyser = Tools::getClosestUnitTo(unit, BWAPI::Broodwar->getGeysers()).value();
-				if (closestGeyser) { unit->rightClick(closestGeyser); }
-				n_gaz += 1;
+			if (unit->isGatheringGas()) {
+				BWAPI::Unit closestMineral = Tools::getClosestUnitTo(unit, BWAPI::Broodwar->getMinerals()).value();
+				if (closestMineral) { unit->rightClick(closestMineral);	n_double -= 1.0;
+				}
 			}
 
 			if (n_double / N_double <= prop_gaz) {

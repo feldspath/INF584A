@@ -20,6 +20,10 @@ void StarterBot::onStart()
 
 	// Call MapTools OnStart
 	m_mapTools.onStart();
+
+	//To test WorkManager
+	//Tools::buildBuilding(BWAPI::UnitTypes::Zerg_Extractor);
+
 }
 
 // Called whenever the game ends and tells you if you won or not
@@ -38,7 +42,16 @@ void StarterBot::onFrame()
 
 	troopManager.update();
 	productionManager.update();
-	//workManager.update();
+
+	workManager.update();
+
+	//To test WorkManager
+	//n += 1;
+
+	//if (n >= 1000) {
+	//	std::cout << "ok" << std::endl;
+	//	workManager.change_prop(0.5);
+	//}
 
 
 	// Draw unit health bars, which brood war unfortunately does not do

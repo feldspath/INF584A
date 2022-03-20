@@ -14,6 +14,7 @@ private:
 	ProductionManager productionManager;
 	TroopManager troopManager;
 	WorkManager workManager;
+	int n = 0;
 
 
 public:

@@ -1,11 +1,13 @@
 #include "ProductionManager.h"
 #include "Squad.h"
+#include "Tools.h"
 #include <optional>
 
 #define require(TYPE) if (!(getExistingUnit(TYPE).has_value())) return TYPE;
 
 ProductionManager::ProductionManager() : state(State::PREPARE) {
 	//buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Spawning_Pool, 1, 4));
+
 }
 
 static std::optional<BWAPI::Unit> getExistingUnit(BWAPI::UnitType type) {
