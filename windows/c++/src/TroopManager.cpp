@@ -51,7 +51,7 @@ void TroopManager::update() {
 			if (BWAPI::Broodwar->getFrameCount() % 20 == 0 || unit->isIdle() || !(squad.getPreviousUnit().has_value()) || target->getID() != squad.getPreviousUnit().value()->getID()) {
 				unit->attack(target);
 				if (!printed) {
-					printf("attacking %s\n", target->getType().getName().c_str());
+					//printf("attacking %s\n", target->getType().getName().c_str());
 					printed = true;
 				}
 			}
