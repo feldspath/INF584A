@@ -4,14 +4,24 @@
 #include <vector>
 #include <BWAPI.h>
 
+
 class WorkManager {
 private:
+
+	enum class WorkState {
+		WORK, FLEE
+	};
+
 	std::vector<BWAPI::Unit> workers;
 	
-	size_t prop_gaz = 0.5;
+	double_t prop_gaz = 0.5;
+
+	WorkState state = WorkState::WORK;
+
 
 public:
-	void change_prop(size_t new_prop);
+	void change_prop(double_t new_prop);
 	void update();
 	void addWorker(BWAPI::Unit unit);
+	void changeState();
 };

@@ -3,7 +3,7 @@
 #include <BWAPI.h>
 
 
-void WorkManager::change_prop(size_t new_prop)
+void WorkManager::change_prop(double_t new_prop)
 {
 	prop_gaz = new_prop;
 }
@@ -16,7 +16,20 @@ void WorkManager::update()
 	size_t n_mine = 0;
 
 
+	if (state == WorkState::FLEE) {
+		const auto botBase = BWAPI::Broodwar->self()->getStartLocation();
+		BWAPI::TilePosition off = { 60, -5 };
+		botBase + BWAPI::TilePosition(-off.x, -off.y);
+		for (auto& unit : workers) {
+			unit->move(BWAPI::Position(4600, 56));
+		}
+		return;
+		
+	}
+
 	for (auto& unit : workers) {
+
+
 		if (unit->isGatheringGas() || unit->isCarryingGas()) {
 			n_gaz += 1;
 		}
@@ -33,14 +46,17 @@ void WorkManager::update()
 
 	size_t N = n_gaz + n_mine;
 
-	//std::cout << N << n_gaz << n_mine << std::endl;
+	if (N == 0) return;
+
+	double_t N_double = (double_t)N;
+	double_t n_double = (double_t)n_gaz;
 
 
-	if (n_gaz / N <= prop_gaz < (n_gaz + 1) / N) {
+	if (n_double / N_double <= prop_gaz && prop_gaz < (n_double + 1.0) / N_double) {
 		return;
 	}
 
-	if (n_gaz / N <= prop_gaz) {
+	if (n_double / N_double <= prop_gaz) {
 		for (auto& unit : workers) {
 			if (unit->isGatheringMinerals()) {
 				BWAPI::Unit closestMineral = Tools::getClosestUnitTo(unit, BWAPI::Broodwar->getMinerals()).value();
@@ -48,7 +64,9 @@ void WorkManager::update()
 				n_gaz += 1;
 			}
 
-			if (prop_gaz <= n_gaz / N) {
+
+
+			if (prop_gaz <= n_double / N_double) {
 				break;
 			}
 		}
@@ -62,12 +80,14 @@ void WorkManager::update()
 				n_gaz += 1;
 			}
 
-			if (n_gaz / N <= prop_gaz) {
+			if (n_double / N_double <= prop_gaz) {
 				break;
 			}
 		}
 
 	}
+
+	
 	
 
 }

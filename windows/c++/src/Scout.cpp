@@ -10,6 +10,8 @@ void Scout::update() {
 		if (target >= scoutPositions.size()) target = 0;
 	}
 	u.value()->move(scoutPositions.at(target));
+
+	std::cout << scoutPositions.at(target) << std::endl;
 }
 
 static std::vector<BWAPI::TilePosition> baseOffsets = {
