@@ -36,9 +36,9 @@ void StarterBot::onFrame()
 	m_mapTools.onFrame();
 
 
-	const int nActiveUnits = troopManager.update();
-	productionManager.update(nActiveUnits);
-	workManager.update();
+	troopManager.update();
+	productionManager.update();
+	//workManager.update();
 
 
 	// Draw unit health bars, which brood war unfortunately does not do
@@ -139,7 +139,7 @@ void StarterBot::onSendText(std::string text)
 // so this will trigger when you issue the build command for most units
 void StarterBot::onUnitCreate(BWAPI::Unit unit)
 {
-
+	productionManager.resetOrder();
 }
 
 // Called whenever a unit finished construction, with a pointer to the unit

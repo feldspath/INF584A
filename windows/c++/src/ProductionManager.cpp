@@ -1,45 +1,103 @@
 #include "ProductionManager.h"
+#include "Squad.h"
+#include <optional>
+
+#define require(TYPE) if (!(getExistingUnit(TYPE).has_value())) return TYPE;
 
 ProductionManager::ProductionManager() : state(State::PREPARE) {
 	//buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Spawning_Pool, 1, 4));
-	//buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Zergling, 2, 0));
-	//buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Zergling, 4, 0));
-	//buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Zergling, 6, 0));
-
-	//buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Zergling, 8, 0));
-	//buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Zergling, 10, 0));
-	//buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Zergling, 12, 0));
-
-	//buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Overlord, 2, 9));
-	//
-	//int index = 7;
-	//for (int i = 0; i < 100; ++i) {
-	//	for (int j = 0; j < 8; ++j)
-	//		buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Zergling, 2 * (index++), 0));
-	//}
 }
 
-void ProductionManager::update(int nActiveUnits) {
+static std::optional<BWAPI::Unit> getExistingUnit(BWAPI::UnitType type) {
+	for (const auto& unit : BWAPI::Broodwar->self()->getUnits()) {
+		if (Tools::compareUnitTypes(unit->getType(), type) && unit->exists()) {
+			return unit;
+		}
+	}
+	return std::nullopt;
+}
+
+static bool larvaExists() {
+	return getExistingUnit(BWAPI::UnitTypes::Zerg_Larva).has_value();
+}
+
+static BWAPI::UnitType buildColony(BWAPI::UnitType colony) {
+	if (!(getExistingUnit(BWAPI::UnitTypes::Zerg_Creep_Colony).has_value())) return BWAPI::UnitTypes::Zerg_Creep_Colony;
+	else return colony;
+}
+
+
+static BWAPI::UnitType getNextBuilding() {
+	if (!(Tools::getUnitOfType(BWAPI::UnitTypes::Zerg_Hatchery).has_value())) return BWAPI::UnitTypes::Zerg_Hatchery;
+	if (!(Tools::getUnitOfType(BWAPI::UnitTypes::Zerg_Spawning_Pool).has_value())) return BWAPI::UnitTypes::Zerg_Spawning_Pool;
+
+	if (!(Tools::getUnitOfType(BWAPI::UnitTypes::Zerg_Sunken_Colony).has_value())) return buildColony(BWAPI::UnitTypes::Zerg_Sunken_Colony);
+
+	if (!(Tools::getUnitOfType(BWAPI::UnitTypes::Zerg_Evolution_Chamber).has_value())) return BWAPI::UnitTypes::Zerg_Evolution_Chamber;
+
+	const int hatcheryCount = Tools::countUnitsOfType(BWAPI::UnitTypes::Zerg_Hatchery, BWAPI::Broodwar->self()->getUnits());
+	const int sunkenCount = Tools::countUnitsOfType(BWAPI::UnitTypes::Zerg_Sunken_Colony, BWAPI::Broodwar->self()->getUnits());
+	const int sporeCount = Tools::countUnitsOfType(BWAPI::UnitTypes::Zerg_Spore_Colony, BWAPI::Broodwar->self()->getUnits());
+
+	if (sunkenCount < hatcheryCount - 2) return buildColony(BWAPI::UnitTypes::Zerg_Sunken_Colony);
+
+	if (sporeCount < hatcheryCount) return buildColony(BWAPI::UnitTypes::Zerg_Spore_Colony);
+
+	return BWAPI::UnitTypes::Zerg_Hatchery;
+}
+
+static void trainTypeOrSupply(BWAPI::UnitType type) {
+	const int supplyUsed = BWAPI::Broodwar->self()->supplyUsed();
+	const int supplyTotal = BWAPI::Broodwar->self()->supplyTotal();
+	if (supplyUsed + type.supplyRequired() >= supplyTotal) Tools::trainTroop(BWAPI::Broodwar->self()->getRace().getSupplyProvider());
+	else Tools::trainTroop(type);
+}
+
+static bool findMorphingOverlord() {
+	for (const auto& unit : BWAPI::Broodwar->self()->getUnits()) {
+		if (Tools::compareUnitTypes(unit->getType(), BWAPI::UnitTypes::Zerg_Overlord) && unit->isMorphing()) {
+			return true;
+		}
+	}
+	return false;
+}
+
+static bool findBuildingBuilding() {
+	for (const auto& unit : BWAPI::Broodwar->self()->getUnits()) {
+		if (unit->getType().isBuilding() && unit->getRemainingBuildTime() > 0) {
+			return true;
+		}
+	}
+	return false;
+}
+
+void ProductionManager::trainWorkerOrSupply() {
+	const int supplyUsed = BWAPI::Broodwar->self()->supplyUsed();
+	const int supplyTotal = BWAPI::Broodwar->self()->supplyTotal();
+	if (supplyUsed + BWAPI::Broodwar->self()->getRace().getWorker().supplyRequired() > supplyTotal) {
+		if (buildingSupply) return;
+		buildingSupply = Tools::trainTroop(BWAPI::Broodwar->self()->getRace().getSupplyProvider());
+	}
+	else if (!findMorphingOverlord()) {
+		Tools::createWorker();
+		buildingSupply = false;
+	}
+}
+
+void ProductionManager::update() {
 	if (frameDelay > 0) {
 		--frameDelay;
 		return;
 	}
 
-	if (state == State::ATTACK || state == State::ATTACKING) {
-		if (nActiveUnits > 0 && state == State::ATTACK) {
-			printf("switching to attacking state\n");
-			state = State::ATTACKING;
-		}
-		else if (nActiveUnits == 0 && state == State::ATTACKING) {
+	if (state == State::ATTACK) {
+		if (Squad::getSquadResetCount() > 5) {
 			printf("switching to defend state\n");
 			state = State::DEFEND;
-			update(0);
+			update();
 			return;
 		}
-		const int supplyUsed = BWAPI::Broodwar->self()->supplyUsed();
-		const int supplyTotal = BWAPI::Broodwar->self()->supplyTotal();
-		if (supplyUsed + BWAPI::UnitTypes::Zerg_Zergling.supplyRequired() >= supplyTotal) Tools::trainTroop(BWAPI::Broodwar->self()->getRace().getSupplyProvider());
-		else Tools::trainTroop(BWAPI::UnitTypes::Zerg_Zergling);
+		trainTypeOrSupply(BWAPI::UnitTypes::Zerg_Zergling);
 	}
 	else if (state == State::PREPARE) {
 		if (Tools::buildBuilding(BWAPI::UnitTypes::Zerg_Spawning_Pool, Tools::getPoolPlacement())) {
@@ -53,10 +111,16 @@ void ProductionManager::update(int nActiveUnits) {
 			(*task_it)->updateState();
 			++task_it;
 		}
-
+		//printf("findBuildingBuilding():%d building: %d\n", findBuildingBuilding(), building);
 		if (task_it == buildOrder.end()) {
-			// TODO: end of build order
-			printf("End of build order\n");
+			if (orderGiven) return;
+			if (larvaExists()) {
+				trainWorkerOrSupply();
+				orderGiven = buildingSupply;
+			}
+			else {
+				orderGiven = Tools::buildBuilding(getNextBuilding());
+			}
 		}
 		else {
 			(*task_it)->resolve();
@@ -67,4 +131,8 @@ void ProductionManager::update(int nActiveUnits) {
 
 void ProductionManager::addTask(std::shared_ptr<Task>& task) {
 	buildOrder.emplace_back(task);
+}
+
+void ProductionManager::resetOrder() {
+	orderGiven = false;
 }

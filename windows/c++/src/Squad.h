@@ -15,15 +15,19 @@ private:
 	std::optional<Unit> previousTarget = std::nullopt;
 	std::optional<BWAPI::Unit> previousTargetUnit;
 
+	static int nSquadReset;
+
 public:
+
 	void addUnit(const BWAPI::Unit& unit);
-	int update();
+	void update();
 	bool tryAddUnit(const BWAPI::Unit& unit);
 	BWAPI::Position getCenter() const;
 	BWAPI::Unitset getTroops() const;
 	std::optional<BWAPI::Unit> getPreviousUnit() const;
 	void updatePreviousTarget(std::optional<BWAPI::Unit> target);
-
+	float getMergeDistance() { return mergeDistance;  }
 	// returns total damage per frame
 	float getDPSEstimate() const;
+	static int getSquadResetCount() { return nSquadReset; }
 };

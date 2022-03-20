@@ -28,6 +28,7 @@ namespace Tools
     void drawHealthBar(BWAPI::Unit unit, double ratio, BWAPI::Color color, int yOffset);
 
     bool trainTroop(BWAPI::UnitType);
+    void createWorker();
 
     BWAPI::TilePosition getEnemyStartLocation();
     BWAPI::TilePosition getPoolPlacement();

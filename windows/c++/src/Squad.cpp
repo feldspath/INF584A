@@ -7,11 +7,13 @@
 #include "Tools.h"
 #include <assert.h>
 
+int Squad::nSquadReset = 0;
+
 void Squad::addUnit(const BWAPI::Unit& unit) {
 	troops.insert(unit->getID());
 }
 
-int Squad::update() {
+void Squad::update() {
 	center = BWAPI::Position(0, 0);
 	std::set<int> newSet;
 	int count = 0;
@@ -36,8 +38,6 @@ int Squad::update() {
 		previousTargetUnit = std::nullopt;
 		previousTarget = std::nullopt;
 	}
-
-	return count;
 }
 
 BWAPI::Unitset Squad::getTroops() const {
@@ -56,6 +56,7 @@ bool Squad::tryAddUnit(const BWAPI::Unit& unit) {
 	if (troops.size() == 0) {
 		addUnit(unit);
 		center = unit->getPosition();
+		++nSquadReset;
 		return true;
 	}
 	if (BWAPI::Position(unit->getPosition()).getDistance(center) < mergeDistance) {

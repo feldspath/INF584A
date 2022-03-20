@@ -6,14 +6,14 @@
 #include <iterator>
 #include "Tools.h"
 
-int TroopManager::update() {
+void TroopManager::update() {
 	for (auto& scout : scouts) scout.update();
 
-	const int nActiveUnits = squad.update();
+	squad.update();
 
 	// update troops: every military unit try to join the squad
 	for (const auto& unit : BWAPI::Broodwar->self()->getUnits()) {
-		if ((!BWAPI::Filter::CanAttack || BWAPI::Filter::IsWorker || !BWAPI::Filter::IsCompleted)(unit)) continue;
+		if ((BWAPI::Filter::IsBuilding || !BWAPI::Filter::CanAttack || BWAPI::Filter::IsWorker || !BWAPI::Filter::IsCompleted)(unit)) continue;
 		if (!(squad.tryAddUnit(unit)) && (unit->isIdle() || BWAPI::Broodwar->getFrameCount() % 20 == 0)) unit->attack(squad.getCenter());
 	}
 
@@ -32,8 +32,12 @@ int TroopManager::update() {
 		// no target found: go to the enemy base
 		const auto enemyBase = BWAPI::Position(Tools::getEnemyStartLocation());
 		for (const auto& unit : squad.getTroops()) {
+			
 			if (BWAPI::Broodwar->getFrameCount() % 20 == 0 || unit->isIdle()) {
-				unit->attack(enemyBase);
+				if (unit->getDistance(squad.getCenter()) > squad.getMergeDistance())
+					unit->move(squad.getCenter());
+				else 
+					unit->attack(enemyBase);
 			}
 		}
 	}
@@ -54,8 +58,6 @@ int TroopManager::update() {
 		}
 	}
 	squad.updatePreviousTarget(target == nullptr ? std::nullopt : std::optional<BWAPI::Unit>(target));
-
-	return nActiveUnits;
 }
 
 static bool isInRange(const BWAPI::Unit enemy, const BWAPI::Unit troop) {
