@@ -39,7 +39,7 @@ void StarterBot::onFrame()
 	// Update our MapTools information
 	m_mapTools.onFrame();
 
-	sendIdleWorkersToMinerals();
+	//sendIdleWorkersToMinerals();
 
 
 	troopManager.update();
