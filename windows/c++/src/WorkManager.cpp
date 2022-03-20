@@ -33,7 +33,7 @@ void WorkManager::update()
 
 	size_t N = n_gaz + n_mine;
 
-	std::cout << N << n_gaz << n_mine << std::endl;
+	//std::cout << N << n_gaz << n_mine << std::endl;
 
 
 	if (n_gaz / N <= prop_gaz < (n_gaz + 1) / N) {

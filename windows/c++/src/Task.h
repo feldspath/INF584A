@@ -32,6 +32,7 @@ public:
 
 	bool isDone() const override;
 	bool resolve() override;
+	BWAPI::UnitType getUnitType() const { return unitType; }
 };
 
 class UpgradeTask : public Task {

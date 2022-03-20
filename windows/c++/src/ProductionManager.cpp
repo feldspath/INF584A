@@ -2,86 +2,9 @@
 #include "Squad.h"
 #include <optional>
 
-#define require(TYPE) if (!(getExistingUnit(TYPE).has_value())) return TYPE;
-
 ProductionManager::ProductionManager() : state(State::PREPARE) {
-	//buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Spawning_Pool, 1, 4));
-}
-
-static std::optional<BWAPI::Unit> getExistingUnit(BWAPI::UnitType type) {
-	for (const auto& unit : BWAPI::Broodwar->self()->getUnits()) {
-		if (Tools::compareUnitTypes(unit->getType(), type) && unit->exists()) {
-			return unit;
-		}
-	}
-	return std::nullopt;
-}
-
-static bool larvaExists() {
-	return getExistingUnit(BWAPI::UnitTypes::Zerg_Larva).has_value();
-}
-
-static BWAPI::UnitType buildColony(BWAPI::UnitType colony) {
-	if (!(getExistingUnit(BWAPI::UnitTypes::Zerg_Creep_Colony).has_value())) return BWAPI::UnitTypes::Zerg_Creep_Colony;
-	else return colony;
-}
-
-
-static BWAPI::UnitType getNextBuilding() {
-	if (!(Tools::getUnitOfType(BWAPI::UnitTypes::Zerg_Hatchery).has_value())) return BWAPI::UnitTypes::Zerg_Hatchery;
-	if (!(Tools::getUnitOfType(BWAPI::UnitTypes::Zerg_Spawning_Pool).has_value())) return BWAPI::UnitTypes::Zerg_Spawning_Pool;
-
-	if (!(Tools::getUnitOfType(BWAPI::UnitTypes::Zerg_Sunken_Colony).has_value())) return buildColony(BWAPI::UnitTypes::Zerg_Sunken_Colony);
-
-	if (!(Tools::getUnitOfType(BWAPI::UnitTypes::Zerg_Evolution_Chamber).has_value())) return BWAPI::UnitTypes::Zerg_Evolution_Chamber;
-
-	const int hatcheryCount = Tools::countUnitsOfType(BWAPI::UnitTypes::Zerg_Hatchery, BWAPI::Broodwar->self()->getUnits());
-	const int sunkenCount = Tools::countUnitsOfType(BWAPI::UnitTypes::Zerg_Sunken_Colony, BWAPI::Broodwar->self()->getUnits());
-	const int sporeCount = Tools::countUnitsOfType(BWAPI::UnitTypes::Zerg_Spore_Colony, BWAPI::Broodwar->self()->getUnits());
-
-	if (sunkenCount < hatcheryCount - 2) return buildColony(BWAPI::UnitTypes::Zerg_Sunken_Colony);
-
-	if (sporeCount < hatcheryCount) return buildColony(BWAPI::UnitTypes::Zerg_Spore_Colony);
-
-	return BWAPI::UnitTypes::Zerg_Hatchery;
-}
-
-static void trainTypeOrSupply(BWAPI::UnitType type) {
-	const int supplyUsed = BWAPI::Broodwar->self()->supplyUsed();
-	const int supplyTotal = BWAPI::Broodwar->self()->supplyTotal();
-	if (supplyUsed + type.supplyRequired() >= supplyTotal) Tools::trainTroop(BWAPI::Broodwar->self()->getRace().getSupplyProvider());
-	else Tools::trainTroop(type);
-}
-
-static bool findMorphingOverlord() {
-	for (const auto& unit : BWAPI::Broodwar->self()->getUnits()) {
-		if (Tools::compareUnitTypes(unit->getType(), BWAPI::UnitTypes::Zerg_Overlord) && unit->isMorphing()) {
-			return true;
-		}
-	}
-	return false;
-}
-
-static bool findBuildingBuilding() {
-	for (const auto& unit : BWAPI::Broodwar->self()->getUnits()) {
-		if (unit->getType().isBuilding() && unit->getRemainingBuildTime() > 0) {
-			return true;
-		}
-	}
-	return false;
-}
-
-void ProductionManager::trainWorkerOrSupply() {
-	const int supplyUsed = BWAPI::Broodwar->self()->supplyUsed();
-	const int supplyTotal = BWAPI::Broodwar->self()->supplyTotal();
-	if (supplyUsed + BWAPI::Broodwar->self()->getRace().getWorker().supplyRequired() > supplyTotal) {
-		if (buildingSupply) return;
-		buildingSupply = Tools::trainTroop(BWAPI::Broodwar->self()->getRace().getSupplyProvider());
-	}
-	else if (!findMorphingOverlord()) {
-		Tools::createWorker();
-		buildingSupply = false;
-	}
+	buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Hatchery, 1, 0));
+	buildOrder.push_back(std::make_shared<ProductionTask>(BWAPI::UnitTypes::Enum::Zerg_Spawning_Pool, 1, 5));
 }
 
 void ProductionManager::update() {
@@ -89,6 +12,7 @@ void ProductionManager::update() {
 		--frameDelay;
 		return;
 	}
+	frameDelay = 5;
 
 	if (state == State::ATTACK) {
 		if (Squad::getSquadResetCount() > 5) {
@@ -111,28 +35,105 @@ void ProductionManager::update() {
 			(*task_it)->updateState();
 			++task_it;
 		}
-		//printf("findBuildingBuilding():%d building: %d\n", findBuildingBuilding(), building);
+
+		if (currentBuildingOrder.has_value()) return;
 		if (task_it == buildOrder.end()) {
-			if (orderGiven) return;
-			if (larvaExists()) {
-				trainWorkerOrSupply();
-				orderGiven = buildingSupply;
+			if (larvaExists() && trainWorkerOrSupply()) {
+				//printf("order given: build supply\n");
+				lastOrderIsSupply = true;
+				currentBuildingOrder = BWAPI::Broodwar->self()->getRace().getSupplyProvider();
 			}
-			else {
-				orderGiven = Tools::buildBuilding(getNextBuilding());
+			if (currentBuildingOrder.has_value()) return;
+			const auto nextBuilding = getNextBuilding();
+			if (Tools::buildBuilding(nextBuilding)) {
+				//printf("order given: build\n");
+				currentBuildingOrder = nextBuilding;
 			}
 		}
 		else {
-			(*task_it)->resolve();
+			if ((*task_it)->resolve()) {
+				//printf("order given: build\n");
+				if (const auto productionTask = dynamic_cast<ProductionTask*>((*task_it).get())) {
+					currentBuildingOrder = productionTask->getUnitType();
+				}
+			}
 		}
 	}
-	frameDelay = 5;
+}
+
+std::optional<BWAPI::Unit> ProductionManager::getExistingUnit(BWAPI::UnitType type) {
+	for (const auto& unit : BWAPI::Broodwar->self()->getUnits()) {
+		if (Tools::compareUnitTypes(unit->getType(), type) && unit->exists()) {
+			return unit;
+		}
+	}
+	return std::nullopt;
+}
+
+bool ProductionManager::larvaExists() {
+	return getExistingUnit(BWAPI::UnitTypes::Zerg_Larva).has_value();
+}
+
+BWAPI::UnitType ProductionManager::buildColony(BWAPI::UnitType colony) {
+	if (!(getExistingUnit(BWAPI::UnitTypes::Zerg_Creep_Colony).has_value())) return BWAPI::UnitTypes::Zerg_Creep_Colony;
+	else return colony;
+}
+
+BWAPI::UnitType ProductionManager::getNextBuilding() {
+	if (!(Tools::getUnitOfType(BWAPI::UnitTypes::Zerg_Sunken_Colony).has_value())) return buildColony(BWAPI::UnitTypes::Zerg_Sunken_Colony);
+
+	if (!(Tools::getUnitOfType(BWAPI::UnitTypes::Zerg_Evolution_Chamber).has_value())) return BWAPI::UnitTypes::Zerg_Evolution_Chamber;
+
+	const int hatcheryCount = Tools::countUnitsOfType(BWAPI::UnitTypes::Zerg_Hatchery, BWAPI::Broodwar->self()->getUnits());
+	const int sunkenCount = Tools::countUnitsOfType(BWAPI::UnitTypes::Zerg_Sunken_Colony, BWAPI::Broodwar->self()->getUnits());
+	const int sporeCount = Tools::countUnitsOfType(BWAPI::UnitTypes::Zerg_Spore_Colony, BWAPI::Broodwar->self()->getUnits());
+
+	if (sunkenCount < hatcheryCount * hatcheryCount + 2) return buildColony(BWAPI::UnitTypes::Zerg_Sunken_Colony);
+
+	if (sporeCount < (hatcheryCount * hatcheryCount + 2) / 2) return buildColony(BWAPI::UnitTypes::Zerg_Spore_Colony);
+
+	return BWAPI::UnitTypes::Zerg_Hatchery;
+}
+
+void ProductionManager::trainTypeOrSupply(BWAPI::UnitType type) {
+	const int supplyUsed = BWAPI::Broodwar->self()->supplyUsed();
+	const int supplyTotal = BWAPI::Broodwar->self()->supplyTotal();
+	if (supplyUsed + type.supplyRequired() >= supplyTotal) Tools::trainTroop(BWAPI::Broodwar->self()->getRace().getSupplyProvider());
+	else Tools::trainTroop(type);
+}
+
+bool ProductionManager::findBuildingBuilding() {
+	for (const auto& unit : BWAPI::Broodwar->self()->getUnits()) {
+		if (unit->getType().isBuilding() && unit->getRemainingBuildTime() > 0) {
+			return true;
+		}
+	}
+	return false;
+}
+
+// returns true if building new supply, false otherwise
+bool ProductionManager::trainWorkerOrSupply() {
+	const int supplyUsed = BWAPI::Broodwar->self()->supplyUsed();
+	const int supplyTotal = BWAPI::Broodwar->self()->supplyTotal();
+	if (supplyUsed + BWAPI::Broodwar->self()->getRace().getWorker().supplyRequired() >= supplyTotal && !lastOrderIsSupply) {
+		return Tools::trainTroop(BWAPI::Broodwar->self()->getRace().getSupplyProvider());
+	}
+	else {
+		Tools::createWorker();
+		return false;
+	}
 }
 
 void ProductionManager::addTask(std::shared_ptr<Task>& task) {
 	buildOrder.emplace_back(task);
 }
 
-void ProductionManager::resetOrder() {
-	orderGiven = false;
+void ProductionManager::resetOrder(BWAPI::UnitType type) {
+	if (currentBuildingOrder.has_value() && Tools::compareUnitTypes(type, currentBuildingOrder.value())) {
+		//printf("reset order\n");
+		if (!(Tools::compareUnitTypes(type, BWAPI::Broodwar->self()->getRace().getSupplyProvider()))) {
+			lastOrderIsSupply = false;
+		}
+		currentBuildingOrder = std::nullopt;
+	}
 }

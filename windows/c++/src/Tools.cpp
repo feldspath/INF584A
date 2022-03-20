@@ -22,7 +22,7 @@ int Tools::countUnitsOfType(BWAPI::UnitType type, const BWAPI::Unitset& units) {
     int sum = 0;
     for (auto& unit : units)
     {
-        if (unit->getType() == type && unit->exists())
+        if (unit->getType() == type)
         {
             sum++;
         }
@@ -78,7 +78,7 @@ bool Tools::buildBuilding(BWAPI::UnitType type, BWAPI::TilePosition pos) {
     }
     const auto builder = getClosestUnitTo(BWAPI::Position(pos), builders);
     if (!(builder.has_value())) {
-        printf("no builder found\n");
+        //printf("no builder found\n");
         return false;
     }
     if (builder.value()->getType().isWorker())
@@ -96,7 +96,7 @@ bool Tools::buildBuilding(BWAPI::UnitType type, BWAPI::TilePosition pos) {
 bool Tools::buildBuilding(BWAPI::UnitType type) {
     const bool buildingOnCreep = type.requiresCreep();
     const auto desiredPos = BWAPI::Broodwar->self()->getStartLocation();
-    const int maxBuildRange = 64;
+    const int maxBuildRange = 128;
     return buildBuilding(type, BWAPI::Broodwar->getBuildLocation(type, desiredPos, maxBuildRange, buildingOnCreep));
 }
 

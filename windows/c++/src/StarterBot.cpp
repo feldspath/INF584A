@@ -35,6 +35,8 @@ void StarterBot::onFrame()
 	// Update our MapTools information
 	m_mapTools.onFrame();
 
+	sendIdleWorkersToMinerals();
+
 
 	troopManager.update();
 	productionManager.update();
@@ -122,7 +124,9 @@ void StarterBot::onUnitDestroy(BWAPI::Unit unit)
 // Zerg units morph when they turn into other units
 void StarterBot::onUnitMorph(BWAPI::Unit unit)
 {
-
+	if (unit->getPlayer()->getID() == BWAPI::Broodwar->self()->getID()) {
+		productionManager.resetOrder(unit->getType());
+	}
 }
 
 // Called whenever a text is sent to the game by a user
@@ -139,7 +143,9 @@ void StarterBot::onSendText(std::string text)
 // so this will trigger when you issue the build command for most units
 void StarterBot::onUnitCreate(BWAPI::Unit unit)
 {
-	productionManager.resetOrder();
+	if (unit->getPlayer()->getID() == BWAPI::Broodwar->self()->getID()) {
+		productionManager.resetOrder(unit->getType());
+	}
 }
 
 // Called whenever a unit finished construction, with a pointer to the unit
@@ -148,7 +154,7 @@ void StarterBot::onUnitComplete(BWAPI::Unit unit)
 	if (Tools::compareUnitTypes(unit->getType(), BWAPI::UnitTypes::Zerg_Overlord))
 		troopManager.addScout(unit);
 	if (!(unit->getType().canAttack())) return;
-	if (unit->canBuild()) {
+	if (unit->getType().isWorker()) {
 		workManager.addWorker(unit);
 	}
 }
@@ -157,9 +163,7 @@ void StarterBot::onUnitComplete(BWAPI::Unit unit)
 // This is usually triggered when units appear from fog of war and become visible
 void StarterBot::onUnitShow(BWAPI::Unit unit)
 {
-	const BWAPI::UnitType u = unit->getType();
-	if (unit->getPlayer()->getID() != BWAPI::Broodwar->self()->getID() && u.getRace() != BWAPI::Races::None)
-		printf("unit appeared of race %s\n", u.getRace().c_str());
+
 }
 
 // Called whenever a unit gets hidden, with a pointer to the destroyed unit
